@@ -109,86 +109,105 @@ namespace System.IO
                     // pressed to end a line.  We also need to handle Backspace specially, to fix up both our buffer of
                     // characters and the position of the cursor.  More advanced processing would be possible, but we
                     // try to keep this very simple, at least for now.
-                    if (keyInfo.Key == ConsoleKey.Enter)
+                    switch (keyInfo.Key)
                     {
-                        readLineStr = _readLineSB.ToString();
-                        _readLineSB.Clear();
-                        if (!previouslyProcessed)
-                        {
-                            Console.WriteLine();
-                        }
-                        break;
-                    }
-                    else if (IsEol(keyInfo.KeyChar))
-                    {
-                        string line = _readLineSB.ToString();
-                        _readLineSB.Clear();
-                        if (line.Length > 0)
-                        {
-                            readLineStr = line;
-                        }
-                        break;
-                    }
-                    else if (keyInfo.Key == ConsoleKey.Backspace)
-                    {
-                        int len = _readLineSB.Length;
-                        if (len > 0)
-                        {
-                            _readLineSB.Length = len - 1;
-                            if (!previouslyProcessed)
+                        case ConsoleKey.Enter:
                             {
-                                // The ReadLine input may wrap accross terminal rows and we need to handle that.
-                                // note: ConsolePal will cache the cursor position to avoid making many slow cursor position fetch operations.
-                                if (ConsolePal.TryGetCursorPosition(out int left, out int top, reinitializeForRead: true) &&
-                                    left == 0 && top > 0)
+                                readLineStr = _readLineSB.ToString();
+                                _readLineSB.Clear();
+                                if (!previouslyProcessed)
                                 {
-                                    if (s_clearToEol == null)
-                                    {
-                                        s_clearToEol = ConsolePal.TerminalFormatStrings.Instance.ClrEol ?? string.Empty;
-                                    }
-
-                                    // Move to end of previous line
-                                    ConsolePal.SetCursorPosition(ConsolePal.WindowWidth - 1, top - 1);
-                                    // Clear from cursor to end of the line
-                                    ConsolePal.WriteStdoutAnsiString(s_clearToEol, mayChangeCursorPosition: false);
+                                    Console.WriteLine();
                                 }
-                                else
-                                {
-                                    if (s_moveLeftString == null)
-                                    {
-                                        string? moveLeft = ConsolePal.TerminalFormatStrings.Instance.CursorLeft;
-                                        s_moveLeftString = !string.IsNullOrEmpty(moveLeft) ? moveLeft + " " + moveLeft : string.Empty;
-                                    }
-
-                                    Console.Write(s_moveLeftString);
-                                }
+                                break;
                             }
-                        }
+
+                        case ConsoleKey.Backspace:
+                            {
+
+                                int len = _readLineSB.Length;
+                                if (len > 0)
+                                {
+                                    _readLineSB.Length = len - 1;
+                                    if (!previouslyProcessed)
+                                    {
+                                        // The ReadLine input may wrap accross terminal rows and we need to handle that.
+                                        // note: ConsolePal will cache the cursor position to avoid making many slow cursor position fetch operations.
+                                        if (ConsolePal.TryGetCursorPosition(out int left, out int top, reinitializeForRead: true) &&
+                                            left == 0 && top > 0)
+                                        {
+                                            if (s_clearToEol == null)
+                                            {
+                                                s_clearToEol = ConsolePal.TerminalFormatStrings.Instance.ClrEol ?? string.Empty;
+                                            }
+
+                                            // Move to end of previous line
+                                            ConsolePal.SetCursorPosition(ConsolePal.WindowWidth - 1, top - 1);
+                                            // Clear from cursor to end of the line
+                                            ConsolePal.WriteStdoutAnsiString(s_clearToEol, mayChangeCursorPosition: false);
+                                        }
+                                        else
+                                        {
+                                            if (s_moveLeftString == null)
+                                            {
+                                                string? moveLeft = ConsolePal.TerminalFormatStrings.Instance.CursorLeft;
+                                                s_moveLeftString = !string.IsNullOrEmpty(moveLeft) ? moveLeft + " " + moveLeft : string.Empty;
+                                            }
+
+                                            Console.Write(s_moveLeftString);
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+
+
+                        case ConsoleKey.Tab:
+                            {
+                                _readLineSB.Append(keyInfo.KeyChar);
+                                if (!previouslyProcessed)
+                                {
+                                    Console.Write(' ');
+                                }
+                                break;
+                            }
+
+                        case ConsoleKey.Clear:
+                            {
+                                _readLineSB.Clear();
+                                if (!previouslyProcessed)
+                                {
+                                    Console.Clear();
+                                }
+                                break;
+                            }
+
+                        default:
+                            {
+                                if (IsEol(keyInfo.KeyChar))
+                                {
+                                    string line = _readLineSB.ToString();
+                                    _readLineSB.Clear();
+                                    if (line.Length > 0)
+                                    {
+                                        readLineStr = line;
+                                    }
+                                }
+                                else if (keyInfo.KeyChar != '\0')
+                                {
+                                    _readLineSB.Append(keyInfo.KeyChar);
+                                    if (!previouslyProcessed)
+                                    {
+                                        Console.Write(keyInfo.KeyChar);
+                                    }
+                                }
+                                break;
+                            }
                     }
-                    else if (keyInfo.Key == ConsoleKey.Tab)
-                    {
-                        _readLineSB.Append(keyInfo.KeyChar);
-                        if (!previouslyProcessed)
-                        {
-                            Console.Write(' ');
-                        }
-                    }
-                    else if (keyInfo.Key == ConsoleKey.Clear)
-                    {
-                        _readLineSB.Clear();
-                        if (!previouslyProcessed)
-                        {
-                            Console.Clear();
-                        }
-                    }
-                    else if (keyInfo.KeyChar != '\0')
-                    {
-                        _readLineSB.Append(keyInfo.KeyChar);
-                        if (!previouslyProcessed)
-                        {
-                            Console.Write(keyInfo.KeyChar);
-                        }
-                    }
+
+
+
+
                 }
             }
             finally
